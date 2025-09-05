@@ -133,7 +133,7 @@
     <div class="stage panel" id="stage">
       <div id="welcome" style="text-align:center;color:rgba(230,238,248,0.85)">
         <h2 style="margin:6px 0">Welcome to the 3D Mini Arcade</h2>
-        <p style="max-width:720px;margin:8px auto">Choose a level on the left, set difficulty, and press How to Play for instructions. Complete a level to unlock the next one. Timers adapt to difficulty and task complexity. Good luck!</p>
+        <p style="max-width:720px;margin:8px auto">Choose a level on the left, set difficulty, and press How to Play for instructions. Complete a level to unlock the next one. Timers adapt to difficulty and task complexity. Good luck from technoid!</p>
       </div>
     </div>
   </main>
@@ -257,7 +257,7 @@ function unlockNext(cur){
 
 /* fail/win */
 function fail(levelId, message){
-  showOverlay(`<h2>😅 You failed Level ${levelId}</h2><p style="opacity:.92">${message}</p>
+  showOverlay(`<h2> 🙆‍♂Aww sorry, just failed Level ${levelId}</h2><p style="opacity:.92">${message}</p>
     <div style="margin-top:14px"><button class="btn" onclick="hideOverlay(); startLevel(${levelId})">Retry</button>
     <button class="btn secondary" onclick="hideOverlay(); showMenu()">Menu</button></div>`);
   updateStatus('Failed');
@@ -1050,6 +1050,6 @@ window.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); hi
 /* Start menu on load */
 showMenu();
 </script>
-<footer>Built as a single-file arcade — Memory, Typing, Snake (updated), Pro Candy Crush, Math Logic. Have fun!</footer>
+<footer>Built as a single-file arcade — Memory, Typing, Snake (updated), Pro Candy Crush, Math Logic. Have fun! by technoid (atoopase christopher)</footer>
 </body>
 </html>
