@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>3D Mini Arcade — Levels 1–5 (Pro Candy) — Updated Snake</title>
+<style>
+  :root{
+    --accent:#5b33ff; --accent-2:#272de7; --bg:#071023;
+    --card:#0b1220; --glass: rgba(255,255,255,0.04);
+    --success:#28a745; --danger:#ff4d6d; --muted:rgba(230,238,248,0.72);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;background:linear-gradient(180deg,#041026,#071023);color:#e6eef8;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  .app{max-width:1120px;margin:20px auto;padding:16px;display:grid;grid-template-columns:320px 1fr;gap:18px}
+  @media(max-width:940px){.app{grid-template-columns:1fr;padding:12px}}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:14px;border:1px solid rgba(255,255,255,0.04)}
+  .sidebar{display:flex;flex-direction:column;gap:12px;min-height:320px}
+  .logo{width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:800;color:white}
+  h1{margin:0;font-size:18px}
+  .desc{font-size:12px;color:var(--muted)}
+  .level-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .lvl-btn{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);cursor:pointer;transition:transform .12s}
+  .lvl-btn:active{transform:translateY(2px)}
+  .lvl-btn.locked{opacity:0.46;cursor:not-allowed}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+  .btn{background:var(--accent-2);color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+  .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#dbe9ff}
+  .btn.ghost{background:transparent;border:none;color:var(--muted);padding:8px}
+  .small{padding:8px 10px;font-size:14px}
+  .main{display:flex;flex-direction:column;gap:12px}
+  .header{display:flex;justify-content:space-between;gap:12px;align-items:center}
+  .chips{display:flex;gap:10px}
+  .chip{background:rgba(255,255,255,0.03);padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.04);font-weight:700}
+  .stage{min-height:620px;border-radius:12px;padding:12px;position:relative;overflow:auto;border:1px solid rgba(255,255,255,0.03)}
+  @media(max-width:920px){.stage{min-height:680px}}
+  /* overlays & modal */
+  .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:60}
+  .overlay .card{background:linear-gradient(180deg,#071428,#07132a);padding:22px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);max-width:620px;text-align:center;color:#e6eef8}
+  .modal{position:fixed;left:0;top:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:70}
+  .modal .inner{width:95%;max-width:760px;background:#071023;padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);color:#e6eef8}
+  /* memory 3d card */
+  .memory-board{display:grid;gap:12px;align-items:center;justify-items:center;width:100%}
+  .card-3d{width:110px;height:110px;perspective:1200px}
+  .card-3d .inner{width:100%;height:100%;border-radius:12px;position:relative;transform-style:preserve-3d;transition: transform 520ms cubic-bezier(.2,.9,.25,1);box-shadow:0 10px 30px rgba(2,6,23,0.6)}
+  .card-3d.flipped .inner{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:40px;backface-visibility:hidden}
+  .face.front{background:linear-gradient(135deg,var(--accent-2),var(--accent));color:white}
+  .face.back{background:white;color:var(--accent-2);transform:rotateY(180deg);font-size:34px}
+  .matched .inner{box-shadow:0 14px 44px rgba(40,167,69,0.14);border:2px solid rgba(40,167,69,0.12)}
+  /* typing */
+  .typing-stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:8px}
+  .word-box{font-size:36px;padding:14px 18px;border-radius:12px;background:linear-gradient(180deg,#071428,#071826);border:1px solid rgba(255,255,255,0.04)}
+  .type-input{padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#e6eef8;font-size:18px;width:100%;max-width:680px}
+  /* snake */
+  .snake-stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:6px}
+  .snake-board{background:linear-gradient(180deg,#04101a,#071223);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.04);display:grid;place-items:center}
+  .snake-canvas-wrap{position:relative;display:inline-block}
+  .snake-hud{position:absolute;left:8px;top:8px;background:rgba(0,0,0,0.5);padding:6px 10px;border-radius:10px;font-weight:800;border:1px solid rgba(255,255,255,0.06)}
+  /* candy */
+  .candy-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:6px}
+  .candy-grid{display:grid;gap:4px;padding:6px;border-radius:10px;background:linear-gradient(180deg,#071022,#04101a);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02)}
+  .candy-cell{width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;user-select:none;cursor:pointer;border:1px solid rgba(255,255,255,0.03)}
+  .candy-cell.dragging{opacity:0.55;transform:scale(.98)}
+  .score-row{display:flex;gap:12px;align-items:center}
+  /* math */
+  .math-stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:8px}
+  .expr{font-size:28px;padding:12px 16px;border-radius:10px;background:linear-gradient(180deg,#071428,#071826);border:1px solid rgba(255,255,255,0.04)}
+  .options-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:10px}
+  .num-btn{min-width:120px;min-height:48px;border-radius:10px;border:none;background:linear-gradient(135deg,#081224,#0b1324);color:#dbe9ff;font-weight:800;font-size:18px;cursor:pointer}
+  /* misc */
+  .muted{color:var(--muted)}
+  .center{display:flex;align-items:center;justify-content:center}
+  footer{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+  /* small screens candy & memory */
+  @media(max-width:540px){
+    .card-3d{width:86px;height:86px}
+    .candy-cell{width:40px;height:40px;font-size:18px}
+    .word-box{font-size:28px}
+    .expr{font-size:20px}
+    .snake-hud{font-size:13px;padding:5px 8px;left:6px;top:6px}
+  }
+</style>
+</head>
+<body>
+<div class="app" role="application" aria-label="3D Mini Arcade">
+  <aside class="panel sidebar" aria-label="Sidebar">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="logo">A</div>
+      <div>
+        <h1>3D Mini Arcade</h1>
+        <div class="desc">5 pro levels • 3 difficulties • 3D effects</div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:13px;margin:8px 0;color:var(--muted)">Difficulty</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn small" id="diffEasy" aria-pressed="true">Easy</button>
+        <button class="btn small secondary" id="diffMed" aria-pressed="false">Medium</button>
+        <button class="btn small secondary" id="diffHard" aria-pressed="false">Hard</button>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:13px;margin:8px 0;color:var(--muted)">Levels</div>
+      <div class="level-list" id="levelList" role="list"></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="homeBtn">Main Menu</button>
+      <button class="btn secondary" id="howBtn">How to Play</button>
+      <button class="btn secondary" id="resetBtn">Reset Progress</button>
+      <button class="btn ghost" id="exportBtn" title="Export progress (basic)">Export</button>
+    </div>
+    <div style="margin-top:6px;color:var(--muted);font-size:13px">Pro Candy: drag & swap. Use touch or mouse.</div>
+  </aside>
+
+  <main class="panel main" role="main">
+    <div class="header">
+      <div class="chips">
+        <div class="chip" id="levelChip">Level: 1</div>
+        <div class="chip" id="diffChip">Difficulty: Easy</div>
+      </div>
+      <div class="chips">
+        <div class="chip" id="statusChip">Status: Ready</div>
+        <div class="chip" id="timerChip">Time: 0s</div>
+        <div class="chip" id="unlockChip">Unlocked: 1</div>
+      </div>
+    </div>
+
+    <div class="stage panel" id="stage">
+      <div id="welcome" style="text-align:center;color:rgba(230,238,248,0.85)">
+        <h2 style="margin:6px 0">Welcome to the 3D Mini Arcade</h2>
+        <p style="max-width:720px;margin:8px auto">Choose a level on the left, set difficulty, and press How to Play for instructions. Complete a level to unlock the next one. Timers adapt to difficulty and task complexity. Good luck!</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- overlay & modal -->
+<div id="overlay" class="overlay" aria-hidden="true"><div class="card" id="overlayCard"></div></div>
+<div id="modal" class="modal" aria-hidden="true"><div class="inner"><div style="display:flex;align-items:center;gap:12px"><h2 id="modalTitle">How to Play</h2><button class="btn secondary" style="margin-left:auto" id="closeModalBtn">Close</button></div><div id="modalBody" style="margin-top:12px;color:rgba(230,238,248,0.95)"></div></div></div>
+
+<script>
+/* -------------------------
+  Arcade State & Config
+-------------------------*/
+const LEVELS = [
+  { id:1, name:'Memory Match', desc:'Flip cards and match pairs.' },
+  { id:2, name:'Typing Sprint', desc:'Type shown words quickly.' },
+  { id:3, name:'Snake Game', desc:'Classic snake: eat food, avoid walls.' },
+  { id:4, name:'Candy Crush (Pro)', desc:'Drag & swap to make matches.' },
+  { id:5, name:'Math Logic Puzzle', desc:'Solve equations under time pressure.' }
+];
+
+let unlocked = 1;
+let currentLevel = null;
+let difficulty = 'easy'; // 'easy' | 'medium' | 'hard'
+let timer = 0, timerInterval = null, timeLimit = 0;
+let currentOnExpire = null, currentTimeLimit = null; // used to resume timer after pause
+
+const stage = document.getElementById('stage');
+const levelListEl = document.getElementById('levelList');
+const levelChip = document.getElementById('levelChip');
+const diffChip = document.getElementById('diffChip');
+const statusChip = document.getElementById('statusChip');
+const timerChip = document.getElementById('timerChip');
+const unlockChip = document.getElementById('unlockChip');
+const overlay = document.getElementById('overlay');
+const overlayCard = document.getElementById('overlayCard');
+const modal = document.getElementById('modal');
+const modalBody = document.getElementById('modalBody');
+const modalTitle = document.getElementById('modalTitle');
+
+/* Difficulty buttons */
+document.getElementById('diffEasy').addEventListener('click', ()=>setDiff('easy'));
+document.getElementById('diffMed').addEventListener('click', ()=>setDiff('medium'));
+document.getElementById('diffHard').addEventListener('click', ()=>setDiff('hard'));
+
+function setDiff(d){
+  difficulty = d;
+  diffChip.textContent = 'Difficulty: ' + capitalize(d);
+  document.getElementById('diffEasy').classList.toggle('secondary', d!=='easy');
+  document.getElementById('diffMed').classList.toggle('secondary', d!=='medium');
+  document.getElementById('diffHard').classList.toggle('secondary', d!=='hard');
+  document.getElementById('diffEasy').setAttribute('aria-pressed', d==='easy');
+  document.getElementById('diffMed').setAttribute('aria-pressed', d==='medium');
+  document.getElementById('diffHard').setAttribute('aria-pressed', d==='hard');
+  // restart current level if playing
+  if(currentLevel) startLevel(currentLevel);
+}
+
+function capitalize(s){ return s[0].toUpperCase()+s.slice(1) }
+
+/* Level list */
+function renderLevelList(){
+  levelListEl.innerHTML = '';
+  LEVELS.forEach(l=>{
+    const el = document.createElement('div');
+    el.className = 'lvl-btn' + (l.id>unlocked?' locked':'');
+    el.setAttribute('role','button');
+    el.setAttribute('tabindex', l.id>unlocked? '-1':'0');
+    el.innerHTML = `<div style="text-align:left"><div style="font-weight:800">Level ${l.id}: ${l.name}</div><div style="font-size:12px;color:rgba(230,238,248,0.75)">${l.desc}</div></div>
+                    <div style="font-weight:900;color:rgba(230,238,248,0.85)">${l.id}</div>`;
+    el.addEventListener('click', ()=>{ if(l.id<=unlocked) startLevel(l.id) });
+    el.addEventListener('keydown',(e)=>{ if(e.key==='Enter' && l.id<=unlocked) startLevel(l.id) });
+    levelListEl.appendChild(el);
+  });
+}
+renderLevelList();
+
+/* Header buttons */
+document.getElementById('howBtn').addEventListener('click', ()=> showHow(currentLevel || 1));
+document.getElementById('homeBtn').addEventListener('click', showMenu);
+document.getElementById('resetBtn').addEventListener('click', ()=>{ if(confirm('Reset progress?')){unlocked=1; renderLevelList(); updateUnlock(); showMenu();}});
+document.getElementById('closeModalBtn').addEventListener('click', ()=> closeModal());
+document.getElementById('exportBtn').addEventListener('click', ()=> { 
+  const data = {unlocked, difficulty, lastLevel: currentLevel};
+  const txt = JSON.stringify(data, null, 2);
+  showOverlay(`<h2>Export</h2><pre style="text-align:left;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;max-height:200px;overflow:auto">${txt}</pre><div style="margin-top:12px"><button class="btn" onclick="hideOverlay()">Close</button></div>`);
+});
+
+/* chips */
+function updateLevelChip(){ levelChip.textContent = 'Level: ' + (currentLevel || '—'); }
+function updateStatus(s){ statusChip.textContent = 'Status: ' + s; }
+function updateTimerChip(){ timerChip.textContent = 'Time: ' + timer + 's'; }
+function updateUnlock(){ unlockChip.textContent = 'Unlocked: ' + unlocked; }
+updateUnlock();
+
+/* overlay & modal helpers */
+function showOverlay(html){ overlayCard.innerHTML = html; overlay.style.display='flex'; overlay.setAttribute('aria-hidden','false'); }
+function hideOverlay(){ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); }
+function openModal(title, body){ modalTitle.textContent = title; modalBody.innerHTML = body; modal.style.display='flex'; modal.setAttribute('aria-hidden','false'); }
+function closeModal(){ modal.style.display='none'; modal.setAttribute('aria-hidden','true'); }
+
+/* timer utils (improved to allow pause/resume) */
+function startTimer(totalSeconds, onExpire, resumeElapsed = 0){
+  // totalSeconds: overall allowed seconds for this level
+  // resumeElapsed: number of seconds already elapsed (0 for fresh start)
+  stopTimer();
+  timer = resumeElapsed;
+  timeLimit = totalSeconds;
+  currentOnExpire = onExpire;
+  currentTimeLimit = totalSeconds;
+  updateTimerChip();
+  timerInterval = setInterval(()=>{ timer++; updateTimerChip(); if(timer>=timeLimit){ stopTimer(); onExpire && onExpire(); } }, 1000);
+}
+function stopTimer(){ if(timerInterval) clearInterval(timerInterval); timerInterval=null; }
+
+/* unlock next level */
+function unlockNext(cur){
+  if(unlocked < cur+1) unlocked = cur+1;
+  renderLevelList(); updateUnlock();
+}
+
+/* fail/win */
+function fail(levelId, message){
+  showOverlay(`<h2>😅 You failed Level ${levelId}</h2><p style="opacity:.92">${message}</p>
+    <div style="margin-top:14px"><button class="btn" onclick="hideOverlay(); startLevel(${levelId})">Retry</button>
+    <button class="btn secondary" onclick="hideOverlay(); showMenu()">Menu</button></div>`);
+  updateStatus('Failed');
+}
+function win(levelId, message){
+  showOverlay(`<h2>🎉 Level ${levelId} Complete!</h2><p style="opacity:.92">${message}</p>
+    <div style="margin-top:14px"><button class="btn" onclick="hideOverlay(); startLevel(${Math.min(levelId+1,5)})">Next Level</button>
+    <button class="btn secondary" onclick="hideOverlay(); showMenu()">Menu</button></div>`);
+  updateStatus('Completed'); unlockNext(levelId);
+}
+
+/* main menu */
+function showMenu(){ stopTimer(); currentLevel=null; updateLevelChip(); updateStatus('Ready'); stage.innerHTML = `<div style="text-align:center;padding:20px"><h2>Welcome!</h2><p class="muted">Choose a level and difficulty to start. Use How to Play for instructions.</p></div>` }
+
+/* how to play modal */
+function showHow(lid){ const id = lid || currentLevel || 1; openModal('How to Play — Level '+id, buildHow(id)); }
+function buildHow(id){
+  if(id===1) return `<p>Flip cards to reveal emojis and match pairs. Complete all pairs before the timer ends. Difficulty changes card count and time.</p>
+    <ul><li>Easy: 3 pairs, 2:00</li><li>Medium: 4 pairs, 1:30</li><li>Hard: 5 pairs, 1:00</li></ul>`;
+  if(id===2) return `<p>Type the displayed words exactly and press Enter. Each correct word counts. Time adapts to word length and difficulty (per-char seconds).</p>`;
+  if(id===3) return `<p>Classic Snake. Use arrow keys (or swipe on mobile). Eat food to grow and score. Avoid colliding with walls or yourself. Easy = slower + 2:00, Medium = faster + 1:30, Hard = very fast + 1:00.</p>`;
+  if(id===4) return `<p>Candy Crush mini — drag a candy onto a neighbor to swap. If the swap creates a match (3+), candies clear, gravity drops new candies, and you score. Reach target points before time runs out.</p>
+    <ul><li>Easy: 2:00 to reach 200</li><li>Medium: 1:30 to reach 400</li><li>Hard: 1:00 to reach 600</li></ul>`;
+  if(id===5) return `<p>Solve math expressions. Choose the correct result among options before the per-puzzle timer expires. Difficulty affects time per puzzle: Easy 15s, Medium 10s, Hard 6s.</p>`;
+  return `<p>Have fun!</p>`;
+}
+
+/* -------------------------
+  Difficulty/time helpers (per spec)
+-------------------------*/
+function timeForMemory(pairs){
+  if(difficulty==='easy') return 120;
+  if(difficulty==='medium') return 90;
+  return 60;
+}
+function timeForTyping(wordLen, goalCount){
+  const per = difficulty==='easy'?3: (difficulty==='medium'?2:1.5);
+  return Math.ceil(per * wordLen * goalCount);
+}
+function timeForSnake(){
+  if(difficulty==='easy') return 120;
+  if(difficulty==='medium') return 90;
+  return 60;
+}
+function snakeTickMs(){
+  if(difficulty==='easy') return 160;
+  if(difficulty==='medium') return 100;
+  return 60;
+}
+function timeForCandy(){
+  if(difficulty==='easy') return 120;
+  if(difficulty==='medium') return 90;
+  return 60;
+}
+function candyGoal(){
+  if(difficulty==='easy') return 200;
+  if(difficulty==='medium') return 400;
+  return 600;
+}
+function timeForLogic(puzzleCount){
+  const per = difficulty==='easy'?15: (difficulty==='medium'?10:6);
+  return per * puzzleCount;
+}
+function perPuzzleTime(){ return difficulty==='easy'?15: (difficulty==='medium'?10:6); }
+
+/* -------------------------
+  LEVEL START ROUTER
+-------------------------*/
+function startLevel(id){
+  // clear previous
+  stopTimer();
+  currentLevel = id;
+  updateLevelChip(); updateStatus('Playing');
+  // render proper level
+  if(id===1) renderLevel1();
+  if(id===2) renderLevel2();
+  if(id===3) renderLevel3();
+  if(id===4) renderLevel4();
+  if(id===5) renderLevel5();
+}
+
+/* -------------------------
+  LEVEL 1: Memory Match
+-------------------------*/
+function renderLevel1(){
+  const levelId = 1;
+  const pairs = difficulty==='easy'?3: (difficulty==='medium'?4:5);
+  const emojis = ["🍎","🍌","🍇","🍓","🍒","🍍","🥝","🍑","🍉","🍋","🥭","🍪","🍫","🍩"];
+  const chosen = shuffle(emojis).slice(0,pairs);
+  const deck = shuffle([...chosen,...chosen]);
+
+  stage.innerHTML = '';
+  const board = document.createElement('div'); board.className='memory-board';
+  const cols = Math.min(4, Math.ceil(Math.sqrt(deck.length)));
+  board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  board.style.justifyContent = 'center';
+  stage.appendChild(board);
+
+  let first=null, second=null, lock=false, matched=0;
+  const flipDelay = difficulty==='hard'?420:640;
+
+  deck.forEach((emoji, idx)=>{
+    const holder = document.createElement('div'); holder.className='card-3d';
+    holder.innerHTML = `<div class="inner"><div class="face front">?</div><div class="face back">${emoji}</div></div>`;
+    holder.addEventListener('click', ()=>{
+      if(lock || holder.classList.contains('flipped')) return;
+      holder.classList.add('flipped');
+      if(!first){ first={holder,emoji}; return; }
+      second={holder,emoji};
+      if(first.emoji===second.emoji){
+        first.holder.classList.add('matched'); second.holder.classList.add('matched');
+        matched++; first=null; second=null;
+        if(matched===pairs){ stopTimer(); setTimeout(()=>win(levelId,'You matched all pairs!'),700); }
+      } else {
+        lock=true;
+        setTimeout(()=>{ first.holder.classList.remove('flipped'); second.holder.classList.remove('flipped'); first=null; second=null; lock=false; }, flipDelay);
+      }
+    });
+    board.appendChild(holder);
+  });
+
+  const t = timeForMemory(pairs);
+  startTimer(t, ()=> fail(levelId, 'Out of time — try again!'));
+  updateStatus(`Memory — ${pairs} pairs`);
+}
+
+/* -------------------------
+  LEVEL 2: Typing Sprint
+-------------------------*/
+function renderLevel2(){
+  const levelId = 2;
+  stage.innerHTML = '';
+  const wrap = document.createElement('div'); wrap.className='typing-stage';
+  wrap.innerHTML = `<div class="muted">Type the word shown and press Enter. Correct words increase score.</div>
+    <div class="word-box" id="targetWord">--</div>
+    <input class="type-input" id="typeInput" placeholder="Type and press Enter" autofocus />
+    <div style="display:flex;gap:14px;align-items:center"><div class="chip" id="typingScore">0</div><div class="muted">Goal: <span id="typingGoal"></span></div></div>`;
+  stage.appendChild(wrap);
+
+  // words
+  const wordBank = ["arcade","javascript","speed","typing","challenge","keyboard","reactive","puzzle","maze","victory","quick","focus","player","score","level","memory","sequence","logic","escape","dynamic","gravity","combo","match","swap"];
+  const goalCount = difficulty==='easy'?5: (difficulty==='medium'?7:9);
+  document.getElementById('typingGoal').textContent = goalCount;
+
+  let score = 0;
+  let currentWord = pick(wordBank);
+  const targetEl = document.getElementById('targetWord');
+  const input = document.getElementById('typeInput');
+  const scoreEl = document.getElementById('typingScore');
+  targetEl.textContent = currentWord;
+  input.value = ''; input.focus();
+
+  const avgLen = Math.round(wordBank.reduce((s,w)=>s+w.length,0)/wordBank.length);
+  const timeBudget = timeForTyping(avgLen, goalCount);
+  startTimer(timeBudget, ()=> fail(levelId, 'Time up — type faster!'));
+  updateStatus('Typing — goal ' + goalCount);
+
+  input.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){
+      const v = input.value.trim();
+      if(!v) return;
+      if(v.toLowerCase() === currentWord.toLowerCase()){
+        score++; scoreEl.textContent = `${score}`;
+        input.value='';
+        if(score>=goalCount){ stopTimer(); setTimeout(()=> win(levelId, `Scored ${score}. Nice!`),300); return; }
+        currentWord = pick(wordBank); targetEl.textContent = currentWord;
+      } else {
+        timer += 3;
+        input.value='';
+      }
+    }
+  });
+}
+
+/* -------------------------
+  LEVEL 3: Snake Game (pro) — UPDATED per request
+-------------------------*/
+function renderLevel3(){
+  const levelId = 3;
+  stage.innerHTML = '';
+  const wrap = document.createElement('div'); wrap.className='snake-stage';
+  wrap.innerHTML = `<div class="muted">Eat apples to grow. Avoid walls & self. Use arrow keys or swipe (mobile).</div>
+    <div id="snakeArea" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap"></div>`;
+  stage.appendChild(wrap);
+
+  const area = document.getElementById('snakeArea');
+
+  // board grid size responsive
+  const cellSize = window.innerWidth < 540 ? 18 : 20;
+  const cols = window.innerWidth < 540 ? 18 : 28;
+  const rows = window.innerWidth < 540 ? 16 : 20;
+
+  // create canvas wrapped in relative container for HUD
+  const wrapCanvas = document.createElement('div');
+  wrapCanvas.className = 'snake-canvas-wrap';
+  wrapCanvas.style.position = 'relative';
+  wrapCanvas.style.display = 'inline-block';
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cols * cellSize;
+  canvas.height = rows * cellSize;
+  canvas.className = 'snake-board';
+  wrapCanvas.appendChild(canvas);
+
+  // HUD placed top-left inside the game area
+  const hud = document.createElement('div');
+  hud.className = 'snake-hud';
+  hud.id = 'snakeHud';
+  hud.textContent = 'Food: 0 / 15';
+  wrapCanvas.appendChild(hud);
+
+  area.appendChild(wrapCanvas);
+
+  const info = document.createElement('div');
+  info.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><div class="chip" id="snakeScore">Score: 0</div><div class="chip" id="snakeLen">Len: 3</div></div>`;
+  area.appendChild(info);
+
+  const ctx = canvas.getContext('2d');
+
+  // snake state
+  let snake = [{x:Math.floor(cols/2), y:Math.floor(rows/2)}];
+  snake.push({x:snake[0].x-1, y:snake[0].y});
+  snake.push({x:snake[0].x-2, y:snake[0].y});
+  let dir = {x:1,y:0}, nextDir = dir;
+  let food = null;
+  let alive = true;
+  let score = 0;
+
+  // NEW: food eaten counter and win trigger
+  let foodEaten = 0;
+  const winFoodTarget = 15;
+  let hasTriggeredFoodWin = false;
+  let pausedForFoodWin = false; // whether the game is paused at the win overlay
+  let foodWinContinueClicked = false; // after continue pressed
+
+  // walls: surround edges are walls; optionally add internal obstacles at hard
+  const walls = new Set();
+  for(let x=0;x<cols;x++){ walls.add(coordKey(x,0)); walls.add(coordKey(x,rows-1)); }
+  for(let y=0;y<rows;y++){ walls.add(coordKey(0,y)); walls.add(coordKey(cols-1,y)); }
+  if(difficulty==='hard'){
+    for(let i=0;i<Math.floor((cols*rows)*0.02);i++){
+      walls.add(coordKey(randInt(2,cols-3), randInt(2,rows-3)));
+    }
+  }
+
+  function coordKey(x,y){ return x+','+y; }
+
+  function placeFood(){
+    let tries = 0;
+    while(tries++ < 800){
+      const x = randInt(1, cols-2);
+      const y = randInt(1, rows-2);
+      if(walls.has(coordKey(x,y))) continue;
+      if(snake.some(p=>p.x===x && p.y===y)) continue;
+      food = {x,y}; break;
+    }
+    if(!food) food = {x:1,y:1};
+  }
+  placeFood();
+
+  // draw
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#041024';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // walls
+    ctx.fillStyle = '#0b1220';
+    walls.forEach(k=>{
+      const [x,y]=k.split(',').map(Number);
+      ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+    });
+
+    // food
+    if(food){
+      ctx.fillStyle = '#ff5a5a';
+      roundRect(ctx, food.x*cellSize+4, food.y*cellSize+4, cellSize-8, cellSize-8, 6);
+      // small "shine"
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fillRect(food.x*cellSize+6, food.y*cellSize+6, 4, 4);
+    }
+
+    // snake
+    for(let i=0;i<snake.length;i++){
+      ctx.fillStyle = i===0 ? '#5b33ff' : '#272de7';
+      const p = snake[i];
+      roundRect(ctx, p.x*cellSize+2, p.y*cellSize+2, cellSize-4, cellSize-4, 6);
+    }
+
+    // update HUD text (show X / 15 until win triggered; after continue show just X)
+    if(!hasTriggeredFoodWin || !foodWinContinueClicked){
+      hud.textContent = `Food: ${foodEaten} / ${winFoodTarget}`;
+    } else {
+      hud.textContent = `Food: ${foodEaten}`;
+    }
+  }
+
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // snake tick
+  let tickMs = snakeTickMs();
+  let tickTimer = null;
+  function startSnake(){
+    // start timer for the level (uses improved startTimer)
+    stopTimer();
+    startTimer(timeForSnake(), ()=> { stopSnake(); fail(levelId,'Time up — snake stopped!'); }, timer /* resume elapsed */);
+    tickMs = snakeTickMs();
+    if(tickTimer) clearInterval(tickTimer);
+    tickTimer = setInterval(step, tickMs);
+  }
+  function stopSnake(){
+    if(tickTimer) clearInterval(tickTimer);
+    tickTimer = null;
+  }
+
+  function step(){
+    if(!alive || pausedForFoodWin) return;
+    dir = nextDir;
+    const head = {x:snake[0].x + dir.x, y:snake[0].y + dir.y};
+
+    // collision with walls
+    if(walls.has(coordKey(head.x, head.y))) { alive=false; stopSnake(); stopTimer(); fail(levelId,'Crashed into wall!'); return; }
+
+    // collision with self
+    if(snake.some(p=>p.x===head.x && p.y===head.y)){ alive=false; stopSnake(); stopTimer(); fail(levelId,'You bit yourself!'); return; }
+
+    snake.unshift(head);
+
+    // ate food?
+    if(food && head.x===food.x && head.y===food.y){
+      foodEaten++;
+      score += 10;
+      document.getElementById('snakeScore').textContent = 'Score: ' + score;
+      document.getElementById('snakeLen').textContent = 'Len: ' + snake.length;
+      // place new food
+      placeFood();
+
+      // check for win threshold (trigger pause + overlay exactly once)
+      if(foodEaten >= winFoodTarget && !hasTriggeredFoodWin){
+        // Pause the game and show congrats overlay with Continue / Next Level options
+        hasTriggeredFoodWin = true;
+        pausedForFoodWin = true;
+        stopSnake();
+        stopTimer();
+        // show overlay
+        showOverlay(`<h2>🎉 Congratulations — 15 foods!</h2><p>You ate 15 foods. Do you want to continue playing or go to the next level?</p>
+          <div style="margin-top:14px;display:flex;gap:10px;justify-content:center">
+            <button class="btn" id="continueSnakeBtn">Continue Playing</button>
+            <button class="btn secondary" id="nextLevelFromSnakeBtn">Next Level</button>
+          </div>`);
+        // attach handlers
+        document.getElementById('continueSnakeBtn').addEventListener('click', ()=>{
+          // resume game but mark that continue was clicked
+          foodWinContinueClicked = true;
+          pausedForFoodWin = false;
+          hideOverlay();
+          // Resume timer using elapsed 'timer' and stored currentTimeLimit & currentOnExpire
+          startTimer(currentTimeLimit, currentOnExpire, timer);
+          // resume snake ticking
+          tickMs = Math.max(30, tickMs - (difficulty==='medium'?4: (difficulty==='hard'?6:0))); // keep same speed logic
+          if(tickTimer) clearInterval(tickTimer);
+          tickTimer = setInterval(step, tickMs);
+          // update HUD content on next draw (draw handles the text)
+        });
+        document.getElementById('nextLevelFromSnakeBtn').addEventListener('click', ()=>{
+          // stop everything, unlock next level and go to level 4
+          hideOverlay();
+          stopSnake(); stopTimer();
+          unlockNext(levelId);
+          setTimeout(()=> startLevel(4), 120);
+        });
+      }
+      // speed up slightly when eating (for medium/hard)
+      if(!pausedForFoodWin){
+        if(difficulty!=='easy'){
+          if(tickTimer) clearInterval(tickTimer);
+          tickMs = Math.max(30, tickMs - (difficulty==='medium'?4:6));
+          tickTimer = setInterval(step, tickMs);
+        }
+      }
+
+    } else {
+      snake.pop();
+    }
+
+    draw();
+  }
+
+  // input: arrow keys + swipe
+  const keyToDir = {ArrowUp:{x:0,y:-1}, ArrowDown:{x:0,y:1}, ArrowLeft:{x:-1,y:0}, ArrowRight:{x:1,y:0}};
+  function handleKey(e){
+    if(!(e.key in keyToDir)) return;
+    const nd = keyToDir[e.key];
+    // prevent reverse
+    if(nd.x === -dir.x && nd.y === -dir.y) return;
+    nextDir = nd;
+  }
+  window.addEventListener('keydown', handleKey);
+
+  // simple swipe detection for mobile
+  let touchStart = null;
+  canvas.addEventListener('touchstart', (e)=> { const t = e.touches[0]; touchStart = {x:t.clientX, y:t.clientY}; });
+  canvas.addEventListener('touchend', (e)=> {
+    if(!touchStart) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
+    if(Math.abs(dx) > Math.abs(dy)){
+      if(dx>20 && dir.x!==-1) nextDir = {x:1,y:0};
+      else if(dx<-20 && dir.x!==1) nextDir = {x:-1,y:0};
+    } else {
+      if(dy>20 && dir.y!==-1) nextDir = {x:0,y:1};
+      else if(dy<-20 && dir.y!==1) nextDir = {x:0,y:-1};
+    }
+    touchStart = null;
+  });
+
+  // initial draw & start
+  draw();
+  startSnake();
+
+  // cleanup when navigating away: stop timers/listeners when stage cleared
+  const mo = new MutationObserver((mut)=>{
+    if(!document.body.contains(canvas)){
+      stopSnake();
+      stopTimer();
+      window.removeEventListener('keydown', handleKey);
+      mo.disconnect();
+    }
+  });
+  mo.observe(document.body, {childList:true, subtree:true});
+}
+
+/* -------------------------
+  LEVEL 4: Candy Crush Mini (Pro drag-and-swap)
+-------------------------*/
+function renderLevel4(){
+  const levelId = 4;
+  stage.innerHTML = '';
+  const wrap = document.createElement('div'); wrap.className='candy-wrap';
+  wrap.innerHTML = `<div class="muted">Drag a candy to swap with an adjacent candy. Matches of 3+ clear and score. Reach target before time runs out.</div>
+    <div style="display:flex;gap:12px;align-items:center" class="score-row"><div class="chip" id="candyScore">Score: 0</div><div class="chip" id="candyGoalChip">Goal: ${candyGoal()}</div><div class="chip" id="candyTimerChip">Timer: —</div></div>
+    <div id="candyBoardWrap" style="width:100%;display:flex;justify-content:center;margin-top:8px"></div>`;
+  stage.appendChild(wrap);
+
+  const boardWrap = document.getElementById('candyBoardWrap');
+  const scoreEl = document.getElementById('candyScore');
+  const goalChip = document.getElementById('candyGoalChip');
+  const candyTimerChip = document.getElementById('candyTimerChip');
+
+  // grid size by difficulty
+  const size = difficulty==='easy'?7: (difficulty==='medium'?8:9);
+  const colors = ['🍒','🔑','🍊','🪣','💻','💊']; // emojis as candies
+  let grid = []; // 2D array of candy indexes
+  let score = 0;
+  let goal = candyGoal();
+
+  // create grid element
+  const gridEl = document.createElement('div');
+  gridEl.className = 'candy-grid';
+  gridEl.style.gridTemplateColumns = `repeat(${size}, 48px)`;
+  gridEl.style.width = `${size*52}px`;
+  boardWrap.appendChild(gridEl);
+
+  function randCandy(){ return randInt(0, colors.length-1); }
+
+  function initGrid(){
+    grid = Array.from({length:size}, ()=>Array(size).fill(null));
+    for(let r=0;r<size;r++){
+      for(let c=0;c<size;c++){
+        grid[r][c] = randCandy();
+      }
+    }
+    removeInitialMatches();
+    renderGrid();
+  }
+
+  function removeInitialMatches(){
+    let changed=true, safety=0;
+    while(changed && safety++ < 200){
+      changed=false;
+      const matches = findMatches();
+      if(matches.length){
+        changed=true;
+        matches.forEach(match=>{
+          match.forEach(([r,c])=> { grid[r][c] = randCandy(); });
+        });
+      }
+    }
+  }
+
+  function renderGrid(){
+    gridEl.innerHTML='';
+    for(let r=0;r<size;r++){
+      for(let c=0;c<size;c++){
+        const val = grid[r][c];
+        const cell = document.createElement('div');
+        cell.className = 'candy-cell';
+        cell.draggable = true;
+        cell.dataset.r = r; cell.dataset.c = c; cell.dataset.v = val;
+        cell.innerText = colors[val];
+        cell.addEventListener('dragstart', dragStart);
+        cell.addEventListener('dragover', dragOver);
+        cell.addEventListener('drop', drop);
+        cell.addEventListener('dragend', dragEnd);
+        cell.addEventListener('click', clickSwapHandler);
+        gridEl.appendChild(cell);
+      }
+    }
+  }
+
+  let dragSrc = null;
+  function dragStart(e){
+    dragSrc = this;
+    this.classList.add('dragging');
+    e.dataTransfer?.setData('text/plain', '');
+  }
+  function dragOver(e){ e.preventDefault(); }
+  function drop(e){
+    e.preventDefault();
+    if(!dragSrc) return;
+    const trg = this;
+    attemptSwap(dragSrc, trg);
+  }
+  function dragEnd(e){
+    if(dragSrc) dragSrc.classList.remove('dragging');
+    dragSrc = null;
+  }
+
+  let selectedCell = null;
+  function clickSwapHandler(e){
+    const cell = this;
+    if(!selectedCell){ selectedCell = cell; cell.classList.add('dragging'); return; }
+    if(selectedCell === cell){ selectedCell.classList.remove('dragging'); selectedCell = null; return; }
+    attemptSwap(selectedCell, cell);
+    if(selectedCell) selectedCell.classList.remove('dragging');
+    selectedCell = null;
+  }
+
+  function isNeighbor(a,b){
+    const ar = Number(a.dataset.r), ac = Number(a.dataset.c);
+    const br = Number(b.dataset.r), bc = Number(b.dataset.c);
+    const dr = Math.abs(ar-br), dc = Math.abs(ac-bc);
+    return (dr+dc)===1;
+  }
+
+  function attemptSwap(a,b){
+    if(!isNeighbor(a,b)) return;
+    const ar = Number(a.dataset.r), ac=Number(a.dataset.c), br=Number(b.dataset.r), bc=Number(b.dataset.c);
+    swapGrid(ar,ac,br,bc);
+    const matches = findMatches();
+    if(matches.length){
+      resolveMatches(matches);
+    } else {
+      swapGrid(ar,ac,br,bc);
+      timer += 4;
+    }
+  }
+
+  function swapGrid(r1,c1,r2,c2){
+    const tmp = grid[r1][c1];
+    grid[r1][c1] = grid[r2][c2];
+    grid[r2][c2] = tmp;
+    renderGrid();
+  }
+
+  function findMatches(){
+    const matches = [];
+    for(let r=0;r<size;r++){
+      let streak = [[r,0]];
+      for(let c=1;c<size;c++){
+        if(grid[r][c] === grid[r][c-1]) streak.push([r,c]);
+        else { if(streak.length>=3) matches.push(streak.slice()); streak = [[r,c]]; }
+      }
+      if(streak.length>=3) matches.push(streak.slice());
+    }
+    for(let c=0;c<size;c++){
+      let streak = [[0,c]];
+      for(let r=1;r<size;r++){
+        if(grid[r][c] === grid[r-1][c]) streak.push([r,c]);
+        else { if(streak.length>=3) matches.push(streak.slice()); streak = [[r,c]]; }
+      }
+      if(streak.length>=3) matches.push(streak.slice());
+    }
+    return matches;
+  }
+
+  function resolveMatches(matches){
+    const toClear = new Set();
+    matches.forEach(arr=>arr.forEach(([r,c])=> toClear.add(`${r},${c}`)));
+    const count = toClear.size;
+    const base = 50;
+    const comboMult = Math.max(1, Math.floor(count/3));
+    score += base * count * comboMult;
+    scoreEl.textContent = 'Score: ' + score;
+    toClear.forEach(k=>{
+      const [r,c] = k.split(',').map(Number);
+      grid[r][c] = null;
+    });
+    renderGrid();
+    setTimeout(()=> {
+      applyGravity();
+      refillGrid();
+      setTimeout(()=> {
+        const newMatches = findMatches();
+        if(newMatches.length){
+          resolveMatches(newMatches);
+        } else {
+          if(score >= goal){ stopTimer(); setTimeout(()=> win(levelId, `Reached ${score} points!`), 300); return; }
+        }
+      }, 220);
+    }, 220);
+  }
+
+  function applyGravity(){
+    for(let c=0;c<size;c++){
+      let pointer = size-1;
+      for(let r=size-1;r>=0;r--){
+        if(grid[r][c] !== null){
+          grid[pointer][c] = grid[r][c];
+          if(pointer !== r) grid[r][c] = null;
+          pointer--;
+        }
+      }
+      for(let r=pointer;r>=0;r--) grid[r][c] = null;
+    }
+    renderGrid();
+  }
+
+  function refillGrid(){
+    for(let r=0;r<size;r++){
+      for(let c=0;c<size;c++){
+        if(grid[r][c] === null) grid[r][c] = randCandy();
+      }
+    }
+    renderGrid();
+  }
+
+  initGrid();
+
+  const t = timeForCandy();
+  candyTimerChip.textContent = `Timer: ${t}s`;
+  startTimer(t, ()=> fail(levelId, 'Time ran out — try again!'));
+  updateStatus('Candy Crush — goal ' + goal);
+  goalChip.textContent = 'Goal: ' + goal;
+
+  function possibleMovesExist(){
+    for(let r=0;r<size;r++){
+      for(let c=0;c<size;c++){
+        const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+        for(const d of dirs){
+          const nr=r+d[0], nc=c+d[1];
+          if(nr<0||nc<0||nr>=size||nc>=size) continue;
+          swapGrid(r,c,nr,nc);
+          const m = findMatches();
+          swapGrid(r,c,nr,nc);
+          if(m.length) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  const stuckTimer = setInterval(()=>{
+    if(!possibleMovesExist()){
+      const flat = grid.flat().filter(x=>x!==null);
+      shuffle(flat);
+      for(let r=0;r<size;r++) for(let c=0;c<size;c++) grid[r][c] = flat[r*size + c] ?? randCandy();
+      renderGrid();
+      timer += 6;
+    }
+  }, 5000);
+
+  const mo = new MutationObserver((mut)=>{
+    if(!document.body.contains(gridEl)){
+      clearInterval(stuckTimer);
+      stopTimer();
+      mo.disconnect();
+    }
+  });
+  mo.observe(document.body, {childList:true, subtree:true});
+}
+
+/* -------------------------
+  LEVEL 5: Math Logic Puzzle
+-------------------------*/
+function renderLevel5(){
+  const levelId = 5;
+  stage.innerHTML = '';
+  const wrap = document.createElement('div'); wrap.className='math-stage';
+  wrap.innerHTML = `<div class="muted">Choose the correct answer before the per-puzzle timer expires.</div>
+    <div class="expr" id="exprBox">--</div>
+    <div class="options-grid" id="mathOptions"></div>
+    <div style="margin-top:12px"><div class="chip" id="mathProgress">0 / 6</div></div>`;
+  stage.appendChild(wrap);
+
+  const exprBox = document.getElementById('exprBox');
+  const optionsEl = document.getElementById('mathOptions');
+  const progress = document.getElementById('mathProgress');
+
+  const puzzlesCount = difficulty==='easy'?6:(difficulty==='medium'?6:8);
+  let solved = 0;
+  let perTime = perPuzzleTime();
+  let puzzleTimerInterval = null;
+  const puzzleTimerChip = document.createElement('div');
+  puzzleTimerChip.className = 'chip';
+  puzzleTimerChip.style.marginLeft = '8px';
+  puzzleTimerChip.id = 'puzzleTimer';
+  exprBox.parentElement.appendChild(puzzleTimerChip);
+
+  function startPuzzleTimer(){
+    let left = perTime;
+    puzzleTimerChip.textContent = `Per puzzle: ${left}s`;
+    if(puzzleTimerInterval) clearInterval(puzzleTimerInterval);
+    puzzleTimerInterval = setInterval(()=>{
+      left--; puzzleTimerChip.textContent = `Per puzzle: ${left}s`;
+      if(left<=0){
+        clearInterval(puzzleTimerInterval);
+        stopTimer();
+        fail(levelId, 'Puzzle time expired!');
+      }
+    }, 1000);
+  }
+
+  function makePuzzle(){
+    perTime = perPuzzleTime();
+    const difficultyOps = difficulty==='easy'? ['+','-'] : (difficulty==='medium'? ['+','-','*'] : ['+','-','*','/']);
+    const op = pick(difficultyOps);
+    let a = randInt(2, 12), b = randInt(2, 12);
+    if(op==='/' ){ a = a * b; }
+    let val;
+    if(op==='+') val = a + b;
+    if(op==='-') val = a - b;
+    if(op==='*') val = a * b;
+    if(op==='/') val = Math.round(a / b);
+    exprBox.textContent = `${a} ${op} ${b} = ?`;
+
+    const correct = val;
+    const opts = new Set([correct]);
+    while(opts.size < 4){
+      let delta = randInt(-6, 8);
+      if(delta === 0) delta = 2;
+      opts.add(correct + delta);
+    }
+    const arr = shuffle(Array.from(opts));
+    optionsEl.innerHTML = '';
+    arr.forEach(v=>{
+      const b = document.createElement('button'); b.className='num-btn'; b.textContent = v;
+      b.addEventListener('click', ()=>{
+        if(v === correct){
+          solved++; progress.textContent = `${solved} / ${puzzlesCount}`;
+          clearInterval(puzzleTimerInterval);
+          if(solved >= puzzlesCount){ stopTimer(); setTimeout(()=> win(levelId, `Solved ${solved} puzzles!`), 300); return; }
+          makePuzzle(); startPuzzleTimer();
+        } else {
+          clearInterval(puzzleTimerInterval);
+          timer += (difficulty==='hard'?8:5);
+          makePuzzle(); startPuzzleTimer();
+        }
+      });
+      optionsEl.appendChild(b);
+    });
+  }
+
+  startTimer(timeForLogic(puzzlesCount), ()=> fail(levelId, 'Out of time for puzzles!'));
+  updateStatus('Math Logic');
+  makePuzzle();
+  startPuzzleTimer();
+}
+
+/* -------------------------
+  UTILITIES
+-------------------------*/
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]] } return arr; }
+function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* Escape to close overlay/modal */
+window.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); hideOverlay(); } });
+
+/* Start menu on load */
+showMenu();
+</script>
+<footer>Built as a single-file arcade — Memory, Typing, Snake (updated), Pro Candy Crush, Math Logic. Have fun!</footer>
+</body>
+</html>
